@@ -26,8 +26,10 @@ var svg,
     dotSize =    d3.scale.linear(),
     color =      d3.scale.ordinal()
                     .domain([0,3])
-                    .range(colorbrewer.Greys[4]),
+                    .range(["#98abc5", "#7b6888", "#a05d56", "#d0743c", "#ff8c00"]),
+                    //.range(colorbrewer.Greys[4]),
                     //.range(["#eee", "#ddd", "#ccc", "#bbb"]),
+    dotBorder = 1,
     countries,
     neighbors,
     countryData,
@@ -35,6 +37,9 @@ var svg,
     forceData,
     artistData,
     zoom,
+    nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
+      return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
+    }),
     force = d3.layout.force();
 
 // Set the zoom behavior defaults
@@ -50,8 +55,15 @@ svg = d3.select(".data-viz")
     .call(zoom)
     ;
 
+// invoke tip in the context of the selection
+svg.call(nameTip);
+
 debugG = svg.append("g").attr("class", "geometry");
 artistG = svg.append("g").attr("class", "artists");
+
+dotBorderScale = d3.scale.linear()
+  .domain([dotBorder,0])
+  .range([dotBorder,0.1]);
 
 queue()
   .defer(loadMapData)
@@ -66,20 +78,28 @@ function loadMapData(callback) {
     countries = topojson.feature(json, json.objects.countries).features;
     neighbors = topojson.neighbors(json.objects.countries.geometries);
 
-    console.log(countries);
+    //console.log(countries);
     //console.log(neighbors);
 
     var geo_path = d3.geo.path()
       .projection(projection)
       ;
 
+    countries.forEach(function(v, i) {
+      v.playcount = 0;
+    });
+
     debugG.selectAll(".country")
         .data(countries)
       .enter()
         .append("path")
-        .attr("class", "country")
         .attr("d", geo_path)
-        .attr("stroke", "#ccc")
+        .attr({
+          "stroke": "#000",
+          "stroke-opacity": 0.1,
+          "stroke-weight": 1,
+          "opacity": 0.1,
+          "class": "artist"})
         .style("fill", function(d, i) {
           return color(d.color = d3.max(neighbors[i], function(n) {
             return countries[n].color;
@@ -102,7 +122,6 @@ function loadArtistData(callback) {
 
 function init(data) {
     dotSize
-      //.domain([0, 1000])
       .domain([0, d3.max(data, function(d) { return +d.playcount; })])
       .range([1,10]);
 
@@ -153,8 +172,6 @@ function init(data) {
       return null;
   });
 
-  console.log(forceData);
-
   force
     .gravity(0)
     .charge(0.00000001)
@@ -163,17 +180,13 @@ function init(data) {
     .nodes(forceData)
     .size([my.width, my.height])
     .on("tick", tick)
+    // Kill the wild animations
     //.start()
     ;
 
   nodes = artistG.selectAll("circle")
       .data(forceData)
     .enter()
-      //.append("circle")
-      //.attr("r", function(d) { return dotSize(d.playcount); })
-      //.append("rect")
-      //.attr("width", function(d) { return dotSize(d.playcount); })
-      //.attr("height", function(d) { return dotSize(d.playcount); })
       .append("path")
       .attr("d", function(d) {
         var x = d.x,
@@ -189,7 +202,16 @@ function init(data) {
         "class": "artist"})
       .attr("fill", function(d) { return getArtistColor(d); } )
       .on("click", function(d) { console.log(d); })
+      .on("mouseover", nameTip.show)
+      .on("mouseout", nameTip.hide)
       ;
+
+  debugG.selectAll("path")
+    .data(countries)
+    .attr("opacity", function(d) {
+      return d.playcount > 0 ? 0.7 : 0.1;
+    })
+    ;
 
   force.start();
   for (var i = 100; i > 0; --i) force.tick();
@@ -199,9 +221,14 @@ function init(data) {
 function getArtistColor(artist) {
   var artistColor;
   countries.forEach(function(v, i) {
-    if (v.properties.BRK_NAME == artist.artist_location.country) {
+    var aCountry = artist.artist_location.country,
+        vBrk = v.properties.BRK_NAME,
+        vAdmin = v.properties.ADMIN,
+        vFormal = v.properties.FORMAL_EN;
+
+    if (vBrk == aCountry || vAdmin == aCountry || vFormal == aCountry) {
       artistColor = color(v.color);
-      return true;
+      v.playcount += +artist.playcount;
     }
   });
   return artistColor;
@@ -209,7 +236,9 @@ function getArtistColor(artist) {
 
 function zoomed() {
   svg.selectAll("path")
-    .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
+    .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")")
+    .attr("stroke-width", function() { return dotBorderScale(dotBorder / d3.event.scale); })
+    ;
 }
 
 
