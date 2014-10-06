@@ -19,6 +19,8 @@ var my = {
 var svg,
     artistG,
     debugG,
+    cartoG,
+    cartogram,
     projection = d3.geo.kavrayskiy7()
                    .scale(170)
                    .translate([my.width/2, my.height/2])
@@ -43,6 +45,13 @@ zoom = d3.behavior.zoom()
   .translate([0,0])
   .on("zoom", zoomed);
 
+cartogram = d3.cartogram()
+  .projection(projection)
+  .value(function(d) {
+    return d.playcount;
+  })
+  ;
+
 svg = d3.select(".data-viz")
     .append("svg")
     .attr({ width: my.width,
@@ -52,10 +61,12 @@ svg = d3.select(".data-viz")
 
 debugG = svg.append("g").attr("class", "geometry");
 artistG = svg.append("g").attr("class", "artists");
+cartoG = svg.append("g").attr("class", "distored-geometry");
 
-queue()
+queue(1)
   .defer(loadMapData)
-  .await(loadArtistData);
+  .defer(loadArtistData)
+  .defer(updateMapArea);
 
 
 function loadMapData(callback) {
@@ -69,6 +80,10 @@ function loadMapData(callback) {
     console.log(countries);
     //console.log(neighbors);
 
+    countries.forEach(function(v, i) {
+      v.playcount = 0;
+    });
+
     var geo_path = d3.geo.path()
       .projection(projection)
       ;
@@ -77,9 +92,10 @@ function loadMapData(callback) {
         .data(countries)
       .enter()
         .append("path")
-        .attr("class", "country")
         .attr("d", geo_path)
-        .attr("stroke", "#ccc")
+        .attr({ "class": "country",
+                "stroke": "#ccc",
+                "opacity": 0 })
         .style("fill", function(d, i) {
           return color(d.color = d3.max(neighbors[i], function(n) {
             return countries[n].color;
@@ -96,6 +112,18 @@ function loadArtistData(callback) {
     if (err) return console.warn(err);
     init(json);
   });
+
+  callback(null, true);
+}
+
+function updateMapArea(callback) {
+  var features = cartogram(countries);
+
+  cartoG.selectAll("path")
+    .data(features)
+    .enter()
+    .append("path")
+      .attr("d", cartogram.path);
 
   callback(null, true);
 }
@@ -169,11 +197,6 @@ function init(data) {
   nodes = artistG.selectAll("circle")
       .data(forceData)
     .enter()
-      //.append("circle")
-      //.attr("r", function(d) { return dotSize(d.playcount); })
-      //.append("rect")
-      //.attr("width", function(d) { return dotSize(d.playcount); })
-      //.attr("height", function(d) { return dotSize(d.playcount); })
       .append("path")
       .attr("d", function(d) {
         var x = d.x,
@@ -194,14 +217,21 @@ function init(data) {
   force.start();
   for (var i = 100; i > 0; --i) force.tick();
   force.stop();
+
+  console.log(countries);
 }
 
 function getArtistColor(artist) {
   var artistColor;
   countries.forEach(function(v, i) {
-    if (v.properties.BRK_NAME == artist.artist_location.country) {
+    var aCountry = artist.artist_location.country,
+        vBrk = v.properties.BRK_NAME,
+        vAdmin = v.properties.ADMIN,
+        vFormal = v.properties.FORMAL_EN;
+
+    if (vBrk == aCountry || vAdmin == aCountry || vFormal == aCountry) {
       artistColor = color(v.color);
-      return true;
+      v.playcount += +artist.playcount;
     }
   });
   return artistColor;
@@ -229,12 +259,7 @@ function tick(e) {
           rad = dotSize(d.playcount);
       return polygonPath(x, y, rad, 6);
     })
-    //.attr("x", function(d) { return d.x; })
-    //.attr("y", function(d) { return d.y; })
-    //.attr("cx", function(d) { return d.x; })
-    //.attr("cy", function(d) { return d.y; })
     ;
-  //console.log("alpha");
 }
 
 // Move nodes toward cluster focus.

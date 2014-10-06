@@ -35,45 +35,37 @@
       // objects are projected into screen coordinates
 
       // project the arcs into screen space
-      var tf = transformer(topology.transform),
-          x,
-          y,
-          len1,
-          i1,
-          out1,
-          len2 = topology.arcs.length,
-          i2 = 0,
+      var tf = transformer(topology.transform),x,y,len1,i1,out1,len2=topology.arcs.length,i2=0,
           projectedArcs = new Array(len2);
-
-      while(i2<len2){
-        x = 0;
-        y = 0;
-        len1 = topology.arcs[i2].length;
-        i1 = 0;
-        out1 = new Array(len1);
-
-        while(i1 < len1){
-          topology.arcs[i2][i1][0] = (x += topology.arcs[i2][i1][0]);
-          topology.arcs[i2][i1][1] = (y += topology.arcs[i2][i1][1]);
-          out1[i1] = projection(tf(topology.arcs[i2][i1]));
-          i1++;
-        }
-        projectedArcs[i2++]=out1;
-      }
+          while(i2<len2){
+            x = 0;
+            y = 0;
+            len1 = topology.arcs[i2].length;
+            i1 = 0;
+            out1 = new Array(len1);
+            while(i1<len1){
+              topology.arcs[i2][i1][0] = (x += topology.arcs[i2][i1][0]);
+              topology.arcs[i2][i1][1] = (y += topology.arcs[i2][i1][1]);
+              out1[i1] = projection(tf(topology.arcs[i2][i1]));
+              i1++;
+            }
+            projectedArcs[i2++]=out1;
+            
+          }
 
       // path with identity projection
       var path = d3.geo.path()
         .projection(null);
 
-      var objects = object(projectedArcs, {type: "GeometryCollection", geometries: geometries})
-        .geometries.map(function(geom) {
-          return {
-            type: "Feature",
-            id: geom.id,
-            properties: properties.call(null, geom, topology),
-            geometry: geom
-          };
-        });
+      var objects = object(projectedArcs, {type: "GeometryCollection", geometries: geometries.geometries})
+          .geometries.map(function(geom) {
+            return {
+              type: "Feature",
+              id: geom.id,
+              properties: properties.call(null, geom, topology),
+              geometry: geom
+            };
+          });
 
       var values = objects.map(value),
           totalValue = d3.sum(values);
@@ -83,13 +75,12 @@
         return objects;
       }
 
-      var i = 0;
+     var i = 0;
       while (i++ < iterations) {
-        var areas = objects.map(path.area),
-            totalArea = d3.sum(areas),
+        var areas = objects.map(path.area);
+            var totalArea = d3.sum(areas),
             sizeErrorsTot =0,
             sizeErrorsNum=0,
-
             meta = objects.map(function(o, j) {
               var area = Math.abs(areas[j]), // XXX: why do we have negative areas?
                   v = +values[j],
@@ -97,7 +88,6 @@
                   radius = Math.sqrt(area / Math.PI),
                   mass = Math.sqrt(desired / Math.PI) - radius,
                   sizeError = Math.max(area, desired) / Math.min(area, desired);
-
               sizeErrorsTot+=sizeError;
               sizeErrorsNum++;
               // console.log(o.id, "@", j, "area:", area, "value:", v, "->", desired, radius, mass, sizeError);
@@ -114,59 +104,46 @@
             });
 
         var sizeError = sizeErrorsTot/sizeErrorsNum,
-        forceReductionFactor = 1 / (1 + sizeError);
+            forceReductionFactor = 1 / (1 + sizeError);
 
         // console.log("meta:", meta);
         // console.log("  total area:", totalArea);
         // console.log("  force reduction factor:", forceReductionFactor, "mean error:", sizeError);
 
-        len2 = projectedArcs.length;
-        i2 = 0;
-        var len3,
-            i3,
-            centroid,
-            mass,
-            radius,
-            rSquared,
-            dx,
-            dy,
-            distSquared,
-            dist,
-            Fij;
-
-        while(i2 < len2){
-          len1 = projectedArcs[i2].length;
-          i1 = 0;
-
-          while(i1<len1){
-            // create an array of vectors: [x, y]
-            delta = [0,0];
-            len3 = meta.length;
-            i3=0;
-            while(i3<len3) {
-              centroid =  meta[i3].centroid;
-              mass =      meta[i3].mass;
-              radius =    meta[i3].radius;
-              rSquared = (radius*radius);
-              dx = projectedArcs[i2][i1][0] - centroid[0];
-              dy = projectedArcs[i2][i1][1] - centroid[1];
-              distSquared = dx * dx + dy * dy;
-              dist=Math.sqrt(distSquared);
-              Fij = (dist > radius)
-                ? mass * radius / dist
-                : mass *
-                (distSquared / rSquared) *
-                (4 - 3 * dist / radius);
-              delta[0]+=(Fij * cosArctan(dy,dx));
-              delta[1]+=(Fij * sinArctan(dy,dx));
-              i3++;
-            }
+        var len1,i1,delta,len2=projectedArcs.length,i2=0,delta,len3,i3,centroid,mass,radius,rSquared,dx,dy,distSquared,dist,Fij;
+        while(i2<len2){
+            len1=projectedArcs[i2].length;
+            i1=0;
+            while(i1<len1){
+              // create an array of vectors: [x, y]
+              delta = [0,0];
+              len3 = meta.length;
+              i3=0;
+              while(i3<len3) {
+                centroid =  meta[i3].centroid;
+                mass =      meta[i3].mass;
+                radius =    meta[i3].radius;
+                rSquared = (radius*radius);
+                dx = projectedArcs[i2][i1][0] - centroid[0];
+                dy = projectedArcs[i2][i1][1] - centroid[1];
+                distSquared = dx * dx + dy * dy;
+                dist=Math.sqrt(distSquared);
+                Fij = (dist > radius)
+                  ? mass * radius / dist
+                  : mass *
+                    (distSquared / rSquared) *
+                    (4 - 3 * dist / radius);
+                delta[0]+=(Fij * cosArctan(dy,dx));
+                delta[1]+=(Fij * sinArctan(dy,dx));
+                i3++;
+              }
             projectedArcs[i2][i1][0] += (delta[0]*forceReductionFactor);
             projectedArcs[i2][i1][1] += (delta[1]*forceReductionFactor);
             i1++;
           }
           i2++;
         }
+
         // break if we hit the target size error
         if (sizeError <= 1) break;
       }
@@ -178,13 +155,13 @@
     }
 
     var iterations = 8,
-    projection = d3.geo.albers(),
-      properties = function(id) {
-        return {};
-      },
-      value = function(d) {
-        return 1;
-      };
+        projection = d3.geo.albers(),
+        properties = function(id) {
+          return {};
+        },
+        value = function(d) {
+          return 1;
+        };
 
     // for convenience
     carto.path = d3.geo.path()
@@ -230,9 +207,13 @@
     };
 
     carto.features = function(topo, geometries) {
-      return geometries.map(function(f) {
-        return carto.feature(topo, f);
+      var features = topojson.feature(topo, geometries);
+      features.features.map(function(d){
+        if (typeof properties(d) == "object" ){
+          Object.keys(properties(d)).map(function(k){d.properties[k] = properties(d)[k]})
+        }
       });
+      return features;
     };
 
     carto.properties = function(props) {
@@ -249,9 +230,9 @@
 
   var transformer = d3.cartogram.transformer = function(tf) {
     var kx = tf.scale[0],
-    ky = tf.scale[1],
-    dx = tf.translate[0],
-      dy = tf.translate[1];
+        ky = tf.scale[1],
+        dx = tf.translate[0],
+        dy = tf.translate[1];
 
     function transform(c) {
       return [c[0] * kx + dx, c[1] * ky + dy];
@@ -270,7 +251,7 @@
 
   function distance(a, b) {
     var dx = b[0] - a[0],
-    dy = b[1] - a[1];
+        dy = b[1] - a[1];
     return Math.sqrt(dx * dx + dy * dy);
   }
 
@@ -294,29 +275,26 @@
       return types[geom.type](geom.coordinates);
     };
   }
-
   function cosArctan(dx,dy){
     var div = dx/dy;
     return (dy>0)?
       (1/Math.sqrt(1+(div*div))):
       (-1/Math.sqrt(1+(div*div)));
   }
-
   function sinArctan(dx,dy){
     var div = dx/dy;
     return (dy>0)?
       (div/Math.sqrt(1+(div*div))):
       (-div/Math.sqrt(1+(div*div)));
   }
-
   function copy(o) {
     return (o instanceof Array)
       ? o.map(copy)
       : (typeof o === "string" || typeof o === "number")
-      ? o
-      : copyObject(o);
+        ? o
+        : copyObject(o);
   }
-
+  
   function copyObject(o) {
     var obj = {};
     for (var k in o) obj[k] = copy(o[k]);
@@ -347,7 +325,6 @@
       o.coordinates = geometryType[o.type](o.arcs);
       return o;
     }
-
     var geometryType = {
       LineString: line,
       MultiLineString: polygon,
@@ -356,8 +333,8 @@
     };
 
     return o.type === "GeometryCollection"
-      ? (o = Object.create(o), o.geometries = o.geometries.map(geometry), o)
-      : geometry(o);
+        ? (o = Object.create(o), o.geometries = o.geometries.map(geometry), o)
+        : geometry(o);
   }
 
   function reverse(array, n) {
