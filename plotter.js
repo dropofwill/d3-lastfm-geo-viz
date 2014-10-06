@@ -20,62 +20,93 @@ var svg,
     artistG,
     debugG,
     projection = d3.geo.kavrayskiy7()
-                 .scale(170)
-                 .translate([my.width/2, my.height/2])
-                 .precision(0.1),
-    dotSize = d3.scale.linear(),
-    color = d3.scale.ordinal()
-              .domain([0,3])
-              .range(["#eee", "#ddd", "#ccc", "#bbb"]) ;
+                   .scale(170)
+                   .translate([my.width/2, my.height/2])
+                   .precision(0.1),
+    dotSize =    d3.scale.linear(),
+    color =      d3.scale.ordinal()
+                    .domain([0,3])
+                    .range(colorbrewer.Greys[4]),
+                    //.range(["#eee", "#ddd", "#ccc", "#bbb"]),
+    countries,
+    neighbors,
+    countryData,
+    nodes,
+    forceData,
+    artistData,
+    zoom,
+    force = d3.layout.force();
+
+// Set the zoom behavior defaults
+zoom = d3.behavior.zoom()
+  .scale(1)
+  .translate([0,0])
+  .on("zoom", zoomed);
 
 svg = d3.select(".data-viz")
     .append("svg")
     .attr({ width: my.width,
-            height: my.height });
+            height: my.height })
+    .call(zoom)
+    ;
 
 debugG = svg.append("g").attr("class", "geometry");
 artistG = svg.append("g").attr("class", "artists");
 
-d3.json("./geo_data/world-admin-0-1-simple.json", function(err, json) {
-  if (err) return console.warn(err);
+queue()
+  .defer(loadMapData)
+  .await(loadArtistData);
 
-  var countries = topojson.feature(json, json.objects.regions).features,
-      neighbors = topojson.neighbors(json.objects.regions.geometries);
 
-  console.log(countries);
-  console.log(neighbors);
+function loadMapData(callback) {
+  d3.json("./geo_data/world-admin-0.json", function(err, json) {
+    if (err) return console.warn(err);
 
-  var geo_path = d3.geo.path()
-    .projection(projection)
-    ;
+    //regions = topojson.feature(json, json.objects.regions).features,
+    countries = topojson.feature(json, json.objects.countries).features;
+    neighbors = topojson.neighbors(json.objects.countries.geometries);
 
-  debugG.selectAll(".country")
-      .data(countries)
-    .enter()
-      .append("path")
-      .attr("class", "country")
-      .attr("d", geo_path)
-      //.attr("fill", "#ccc")
-      .style("fill", function(d, i) { return color(d.color = d3.max(neighbors[i], function(n) { return countries[n].color; }) + 1 | 0); })
+    console.log(countries);
+    //console.log(neighbors);
+
+    var geo_path = d3.geo.path()
+      .projection(projection)
       ;
-});
 
-d3.json("./final_data.json", function(err, json) {
-  if (err) return console.warn(err);
-  init(json);
-});
+    debugG.selectAll(".country")
+        .data(countries)
+      .enter()
+        .append("path")
+        .attr("class", "country")
+        .attr("d", geo_path)
+        .attr("stroke", "#ccc")
+        .style("fill", function(d, i) {
+          return color(d.color = d3.max(neighbors[i], function(n) {
+            return countries[n].color;
+          }) + 1 | 0);
+        })
+        ;
+  });
+
+  callback(null, true);
+}
+
+function loadArtistData(callback) {
+  d3.json("./final_data.json", function(err, json) {
+    if (err) return console.warn(err);
+    init(json);
+  });
+
+  callback(null, true);
+}
 
 function init(data) {
-  var nodes,
-      forceData,
-      force = d3.layout.force();
-
     dotSize
       //.domain([0, 1000])
       .domain([0, d3.max(data, function(d) { return +d.playcount; })])
-      .range([2,15]);
+      .range([1,10]);
 
-  forceData = data.map(function(d) {
+  artistData = data.map(function(d) {
     if (d.geocode) {
       var point = projection([d.geocode.lng, d.geocode.lat]);
 
@@ -88,7 +119,17 @@ function init(data) {
           y: point[1],
           x0: point[0],
           y0: point[1],
-          playcount: +d.playcount
+          playcount: +d.playcount,
+          radius: dotSize(+d.playcount),
+          genres: d.genres,
+          discovery_rank: d.discovery_rank,
+          familiarity: d.familiarity,
+          hotttnesss: d.hotttnesss,
+          years_active: d.years_active,
+          hotttnesss_rank: d.hotttnesss_rank,
+          familiarity_rank: d.familiarity_rank,
+          id: d.id,
+          artist_location: d.artist_location
         };
       }
       else {
@@ -105,24 +146,25 @@ function init(data) {
   });
 
   // Remove items without x,y from forceData
-  forceData = forceData.filter(function(d) {
+  forceData = artistData.filter(function(d) {
     if (d.noGeocode !== true)
       return d;
     else
       return null;
   });
 
+  console.log(forceData);
+
   force
     .gravity(0)
-    .charge(-10)
-    .chargeDistance(15)
-    //.friction(0.5)
+    .charge(0.00000001)
+    .chargeDistance(0.00000001)
+    .friction(0.7)
     .nodes(forceData)
     .size([my.width, my.height])
     .on("tick", tick)
-    .start();
-
-  //console.log(forceData);
+    //.start()
+    ;
 
   nodes = artistG.selectAll("circle")
       .data(forceData)
@@ -139,71 +181,94 @@ function init(data) {
             rad = dotSize(d.playcount);
         return polygonPath(x, y, rad, 6);
       })
-      .attr("style", "opacity: 0.5")
-      //.attr("cy", function(d) {
-        //if (d.geocode)
-          //return projection([d.geocode.lng, d.geocode.lat])[1];
-        //else
-          //return 0; })
-      //.attr("cx", function(d) {
-        //if (d.geocode)
-          //return projection([d.geocode.lng, d.geocode.lat])[0];
-        //else
-          //return 0; })
+      .attr({
+        "stroke": "#000",
+        "stroke-opacity": 0.5,
+        "stroke-weight": 1,
+        "opacity": 1,
+        "class": "artist"})
+      .attr("fill", function(d) { return getArtistColor(d); } )
+      .on("click", function(d) { console.log(d); })
       ;
 
-  function tick(e) {
-    nodes.each(gravity(0.2 * e.alpha))
-      //.each(collide(0.5))
-      .attr("d", function(d) {
-        var x = d.x,
-            y = d.y,
-            //rad = 4;
-            rad = dotSize(d.playcount);
-        return polygonPath(x, y, rad, 6);
-      })
-      //.attr("x", function(d) { return d.x; })
-      //.attr("y", function(d) { return d.y; })
-      //.attr("cx", function(d) { return d.x; })
-      //.attr("cy", function(d) { return d.y; })
-      ;
-    //console.log("alpha");
+  force.start();
+  for (var i = 100; i > 0; --i) force.tick();
+  force.stop();
+}
+
+function getArtistColor(artist) {
+  var artistColor;
+  countries.forEach(function(v, i) {
+    if (v.properties.BRK_NAME == artist.artist_location.country) {
+      artistColor = color(v.color);
+      return true;
+    }
+  });
+  return artistColor;
+}
+
+function zoomed() {
+  svg.selectAll("path")
+    .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
+}
+
+
+function tick(e) {
+  var q = d3.geom.quadtree(forceData),
+      i = 0,
+      n = forceData.length;
+
+  while (++i < n) {
+    q.visit(circleCollide(forceData[i]));
   }
 
-  // Move nodes toward cluster focus.
-  function gravity(alpha) {
-    return function(d) {
-      d.y += (d.y0 - d.y) * alpha;
-      d.x += (d.x0 - d.x) * alpha;
-    };
-  }
+  nodes.each(gravity(0.2 * e.alpha))
+    .attr("d", function(d) {
+      var x = d.x,
+          y = d.y,
+          rad = dotSize(d.playcount);
+      return polygonPath(x, y, rad, 6);
+    })
+    //.attr("x", function(d) { return d.x; })
+    //.attr("y", function(d) { return d.y; })
+    //.attr("cx", function(d) { return d.x; })
+    //.attr("cy", function(d) { return d.y; })
+    ;
+  //console.log("alpha");
+}
 
-  function collide(k) {
-    var q = d3.geom.quadtree(forceData);
-    return function(nodes) {
-      var nr  = nodes.r + padding,
-          nx1 = nodes.x - nr,
-          nx2 = nodes.x + nr,
-          ny1 = nodes.y - nr,
-          ny2 = nodes.y + nr;
-      q.visit(function(quad, x1, y1, x2, y2) {
-        if (quad.point && (quad.point !== nodes)) {
-          var x = nodes.x - quad.point.x,
-            y = nodes.y - quad.point.y,
-          l = x * x + y * y,
-              r = nr + quad.point.r;
-          if (l < r * r) {
-            l = ((l = Math.sqrt(l)) - r) / l * k;
-            nodes.x -= x *= l;
-            nodes.y -= y *= l;
-            quad.point.x += x;
-            quad.point.y += y;
-          }
-        }
-        return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
-      });
-    };
-  }
+// Move nodes toward cluster focus.
+function gravity(alpha) {
+  return function(d) {
+    d.y += (d.y0 - d.y) * alpha;
+    d.x += (d.x0 - d.x) * alpha;
+  };
+}
+
+function circleCollide(thisNode) {
+  var r = thisNode.radius,
+      nx1 = thisNode.x - r,
+      nx2 = thisNode.x + r,
+      ny1 = thisNode.y - r,
+      ny2 = thisNode.y + r;
+
+  return function(quad, x1, y1, x2, y2) {
+    if (quad.point && (quad.point !== thisNode)) {
+      var x = thisNode.x - quad.point.x,
+          y = thisNode.y - quad.point.y,
+          l = Math.sqrt(x * x + y * y),
+          r = thisNode.radius + quad.point.radius;
+
+      if (l < r) {
+        l = (l - r) / l * 0.5;
+        thisNode.x -= x *= l;
+        thisNode.y -= y *= l;
+        quad.point.x += x;
+        quad.point.y += y;
+      }
+    }
+    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+  };
 }
 
 function polygonPath(x,y,rad,sides) {
