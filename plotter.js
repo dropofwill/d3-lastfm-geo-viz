@@ -3,19 +3,18 @@ var svg,
     topoG,
     barG,
     width = 960,
-    height = 550,
+    height = 500,
     projection = d3.geo.kavrayskiy7()
                    .scale(220)
-                   .translate([width/2 - 20, height/2])
+                   .translate([width/2 - 20, height/2 + 50])
                    .precision(0.1),
     projection2 =  d3.geo.azimuthalEqualArea(),
     dotSize =    d3.scale.linear(),
     barSize =    d3.scale.linear(),
     color =      d3.scale.ordinal()
                     .domain([0,3])
-                    .range(["#98abc5", "#7b6888", "#a05d56", "#d0743c", "#ff8c00"]),
-                    //.range(colorbrewer.Greys[4]),
-                    //.range(["#eee", "#ddd", "#ccc", "#bbb"]),
+                    //.range(["#7b6888", "#c7ceda","#98abc5",  "#d0743c", "#ff8c00"]),
+                    .range(['rgb(166,206,227)','rgb(31,120,180)','rgb(178,223,138)','rgb(51,160,44)']),
     dotBorder = 1,
     minPlaycount = 3,
     countries,
@@ -27,8 +26,15 @@ var svg,
     artistData,
     zoom,
 
+    locked = false,
     buttonForce = document.querySelector("#force-switch"),
-    buttonSwitched = document.querySelector("#projection-switch"),
+    buttonGesture = document.querySelector("#lock-switch"),
+    buttonZoomIn = document.querySelector("#zoom-in-btn"),
+    buttonZoomOut = document.querySelector("#zoom-out-btn"),
+    buttonReset = document.querySelector("#reset-btn"),
+
+    artistDetails = d3.select(".artist-details"),
+    countryDetails = d3.select(".country-details"),
 
     nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
       return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
@@ -51,7 +57,7 @@ svg = d3.select(".data-viz")
     ;
 
 // invoke tip in the context of the selection
-svg.call(nameTip);
+//svg.call(nameTip);
 
 // A rectangle to reset the view, drawn behind the map
 svg.append("rect")
@@ -78,7 +84,6 @@ function loadMapData(callback) {
   d3.json("./geo_data/world-admin-0.json", function(err, json) {
     if (err) return console.warn(err);
 
-    //regions = topojson.feature(json, json.objects.regions).features,
     countries = topojson.feature(json, json.objects.countries).features;
     neighbors = topojson.neighbors(json.objects.countries.geometries);
 
@@ -127,9 +132,8 @@ function init(data) {
 
   dotSize
     .domain([minPlaycount, maxPlaycount])
-    .range([0.25,15])
+    .range([0.5,15])
     ;
-
 
   artistData = data.map(function(d) {
     if (d.geocode && d.playcount > minPlaycount) {
@@ -217,7 +221,10 @@ function init(data) {
         "opacity": 0.5,
         "class": "artist"})
       .attr("fill", function(d) { return getArtistColor(d); } )
-      .on("click", function(d) { console.log(d); })
+      .on("click", function(d) {
+        console.log(d);
+        updateBox(d, "artist");
+      })
       .on("mouseover", nameTip.show)
       .on("mouseout", nameTip.hide)
       ;
@@ -234,7 +241,10 @@ function init(data) {
   topoG.selectAll("path")
     .data(countries)
     .attr("opacity", function(d) {
-      return d.playcount > 0 ? 0.7 : 0.1;
+      return d.playcount > minPlaycount ? 0.7 : 0.1;
+    })
+    .on("click", function(d) {
+      if (d.playcount > minPlaycount) console.log(d);
     })
     ;
 
@@ -256,16 +266,21 @@ function init(data) {
     }
   });
 
-  barG.selectAll("rect")
-      .data(countriesPlayData)
-    .enter()
-      .append("rect")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("width", function(d) { return barSize(d.playcount); })
-      .attr("height", 15)
-      .attr("fill", function(d) { return color(d.color); })
-    ;
+  //barG.selectAll("rect")
+      //.data(countriesPlayData)
+    //.enter()
+      //.append("rect")
+      //.attr("x", 0)
+      //.attr("y", 0)
+      //.attr("width", function(d) { return barSize(d.playcount); })
+      //.attr("height", 15)
+      //.attr("fill", function(d) { return color(d.color); })
+    //;
+}
+
+function updateBox(d, type) {
+  if (type === "artist") {
+  }
 }
 
 function getArtistColor(artist) {
@@ -289,17 +304,6 @@ function zoomed() {
     .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")")
     .attr("stroke-width", function() { return dotBorderScale(dotBorder / d3.event.scale); })
     ;
-
-  /*
-   *artistG.selectAll("path")
-   *  .attr("d", function(d) {
-   *      var x = d.x,
-   *          y = d.y,
-   *          rad = dotSize(d.playcount / (0.5 * d3.event.scale));
-   *      return polygonPath(x, y, rad, 6);
-   *  })
-   *  ;
-   */
 }
 
 function reset() {
@@ -376,7 +380,36 @@ function polygonPath(x, y, rad, sides) {
   return path;
 }
 
+function zoomDir(dir) {
+  var h = parseFloat(document.querySelector(".data-viz svg").clientHeight),
+      w = parseFloat(document.querySelector(".data-viz svg").clientWidth),
+      newZoom,
+      newX,
+      newY;
+
+  if (dir == "in") {
+    newZoom = zoom.scale() * 1.5;
+    newX = ((zoom.translate()[0] - (width / 2)) * 1.5) + width / 2;
+    newY = ((zoom.translate()[1] - (height / 2)) * 1.5) + height / 2;
+  }
+  else {
+    newZoom = zoom.scale() * 0.75;
+    newX = ((zoom.translate()[0] - (width / 2)) * 0.75) + width / 2;
+    newY = ((zoom.translate()[1] - (height / 2)) * 0.75) + height / 2;
+  }
+
+  svg.transition()
+    .duration(750)
+    .call(zoom.translate([newX, newY]).scale(newZoom).event);
+}
+
+buttonZoomIn.addEventListener("click", function() { zoomDir("in"); });
+buttonZoomOut.addEventListener("click", function() { zoomDir("out"); });
+
 buttonForce.addEventListener("click", function() {
+  this.classList.toggle("icon-expand");
+  this.classList.toggle("icon-contract");
+
   if (buttonForce.getAttribute("data-force") === "true") {
     force.stop();
     force.start();
@@ -387,3 +420,23 @@ buttonForce.addEventListener("click", function() {
     buttonForce.setAttribute("data-force", "true");
   }
 });
+
+buttonReset.addEventListener("click", function() {
+  reset();
+});
+
+buttonGesture.addEventListener("click", function() {
+  this.classList.toggle("icon-locked");
+  this.classList.toggle("icon-unlocked");
+
+  if (!locked) {
+    locked = true;
+    svg.on(".zoom", null);
+  }
+  else {
+    locked = false;
+    svg.call(zoom);
+  }
+});
+
+

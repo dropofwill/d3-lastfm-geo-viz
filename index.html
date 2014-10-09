@@ -2,35 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-
-    <style>
-      @import url(http://fonts.googleapis.com/css?family=Oswald:400,300|Roboto:700,300italic,700italic,300);
-      
-      body {
-        font-family: "Roboto", "verdana", sans-serif;
-      }
-
-      h1, h2, h3, h4, h5, h6 {
-        font-family: "Oswald", sans-serif;
-        text-transform: uppercase;
-        font-weight: 400;
-      }
-
-      .container {
-        max-width: 960px;
-        margin: 0 auto;
-      }
-
-      .hide {
-        display: none;
-      }
-
-      .tip {
-        background: beige;
-        border-radius: 3px;
-        padding: 3px;
-      }
-    </style>
+    <link rel="stylesheet" type="text/css" href="./styles.css">
   </head>
 
   <body>
@@ -39,25 +11,33 @@
       <h1>My Last.fm Listening History from 2012 to 2014</h1>
 
       <div class="data-viz">
+        <div class="ui--row ui--row--abs">
+          <span class="map--ui icon-plus" id="zoom-in-btn"></span>
+          <span class="map--ui" id="reset-btn">Reset</span>
+          <span class="map--ui icon-minus" id="zoom-out-btn"></span>
+          <span class="map--ui icon-locked" id="lock-switch">Gestures</span>
+          <span class="map--ui icon-expand" id="force-switch" data-el=".map">Spread Artists</span>
+        </div>
       </div>
 
-      <div class="artist-box">
-        <h2>Hover Over an Artist</h2>
+      <div class="box artist-box">
+        <h2>Select an Artist</h2>
+        <section class="artist-details">
+          <h3 class="aritst-name"></h3>
+          <p class="artist-loc"></p>
+          <p class="artist-years"></p>
+          <p class="artist-genre"><i>Genres: </i></p>
+          <p class="artist-hot"><i>Familiarity: </i></p>
+          <p class="artist-fam"><i>Hotttnesss: </i></p>
+        </section>
       </div>
 
-      <div class="country-box">
-        <h2>Click on a Country</h2>
-      </div>
-
-      <div class="ui--row ui--row--abs middle hide">
-        <span class="map--ui ico--zoom-in" id="zoomIn"></span>
-        <span class="map--ui" id="reset">Reset</span>
-        <span class="map--ui ico--zoom-out" id="zoomOut"></span>
-        <span class="map--ui ico--locked" id="lock">Gestures</span>
-        <span class="map--ui ico--expand expander" id="force-switch" data-el=".map">Spread Artists</span>
+      <div class="box country-box">
+        <h2>Select a Country</h2>
+        <section class="country-details">
+        </section>
       </div>
     </div>
-
 
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>

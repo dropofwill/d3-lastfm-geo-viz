@@ -1,0 +1,138 @@
+@import url(http://fonts.googleapis.com/css?family=Oswald:400,300|Roboto:700,300italic,700italic,300);
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Roboto", "verdana", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Oswald", sans-serif;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.data-viz {
+  position: relative;
+}
+
+.data-viz svg {
+  width: 100%;
+  min-height: 400px;
+  border: 1px solid $mid;
+}
+
+.box {
+  width: 50%;
+  float: left;
+  padding: 0 20px;
+}
+
+.hide {
+  display: none;
+}
+
+.tip {
+  background: beige;
+  border-radius: 3px;
+  /*padding: 3px;*/
+}
+
+.ui--row {
+  position: absolute;
+  bottom: 0;
+  padding: 10px;
+}
+
+.ui--row > a {
+  line-height: 2;
+}
+
+.map--ui {
+  text-shadow: 1px 1px 0 $light, -1px -1px 0 $light,  1px -1px 0 $light, -1px 1px 0 $light, 1px 1px 0 $light;
+  cursor: pointer;
+  padding: 5px;
+
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.ui--row .ui,
+.ui--row .btn,
+.ui--row .select-state,
+.ui--row .ui--link,
+.ui--row .btn--toggle {
+  margin-bottom: 5px;
+}
+
+@font-face {
+  font-family: 'icomoon';
+  src:url('fonts/icomoon.eot?-340rsl');
+  src:url('fonts/icomoon.eot?#iefix-340rsl') format('embedded-opentype'),
+  url('fonts/icomoon.woff?-340rsl') format('woff'),
+  url('fonts/icomoon.ttf?-340rsl') format('truetype'),
+  url('fonts/icomoon.svg?-340rsl#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-locked:before {
+  font-family: 'icomoon';
+  content: "\e600";
+  padding: 3px;
+}
+.icon-unlocked:before {
+  font-family: 'icomoon';
+  content: "\e606";
+  padding: 3px;
+}
+.icon-spinner:before {
+  font-family: 'icomoon';
+  content: "\e607";
+}
+.icon-expand:before {
+  font-family: 'icomoon';
+  content: "\e608";
+  padding: 3px;
+}
+.icon-contract:before {
+  font-family: 'icomoon';
+  content: "\e609";
+  padding: 3px;
+}
+.icon-close:before {
+  font-family: 'icomoon';
+  content: "\e60a";
+}
+.icon-minus:before {
+  font-family: 'icomoon';
+  content: "\e60b";
+}
+.icon-plus:before {
+  font-family: 'icomoon';
+  content: "\e60c";
+}
+
