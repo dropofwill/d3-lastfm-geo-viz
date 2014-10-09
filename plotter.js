@@ -18,33 +18,44 @@ var my = {
 
 var svg,
     artistG,
-    debugG,
+    topoG,
+    barG,
     projection = d3.geo.kavrayskiy7()
                    .scale(170)
                    .translate([my.width/2, my.height/2])
                    .precision(0.1),
+    projection2 =  d3.geo.azimuthalEqualArea(),
     dotSize =    d3.scale.linear(),
+    barSize =    d3.scale.linear(),
     color =      d3.scale.ordinal()
                     .domain([0,3])
                     .range(["#98abc5", "#7b6888", "#a05d56", "#d0743c", "#ff8c00"]),
                     //.range(colorbrewer.Greys[4]),
                     //.range(["#eee", "#ddd", "#ccc", "#bbb"]),
     dotBorder = 1,
+    minPlaycount = 3,
     countries,
     neighbors,
-    countryData,
+    countriesPlayData,
     nodes,
     forceData,
+    noGeocodeData,
     artistData,
     zoom,
+
+    buttonForce = document.querySelector("#force-switch"),
+    buttonSwitched = document.querySelector("#projection-switch"),
+
     nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
       return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
     }),
+
     force = d3.layout.force();
 
 // Set the zoom behavior defaults
 zoom = d3.behavior.zoom()
   .scale(1)
+  .scaleExtent([1, 30])
   .translate([0,0])
   .on("zoom", zoomed);
 
@@ -58,17 +69,17 @@ svg = d3.select(".data-viz")
 // invoke tip in the context of the selection
 svg.call(nameTip);
 
-debugG = svg.append("g").attr("class", "geometry");
+topoG = svg.append("g").attr("class", "geometry");
 artistG = svg.append("g").attr("class", "artists");
+barG = svg.append("g").attr("class", "bars");
 
 dotBorderScale = d3.scale.linear()
   .domain([dotBorder,0])
   .range([dotBorder,0.1]);
 
-queue()
+queue(1)
   .defer(loadMapData)
-  .await(loadArtistData);
-
+  .defer(loadArtistData);
 
 function loadMapData(callback) {
   d3.json("./geo_data/world-admin-0.json", function(err, json) {
@@ -78,9 +89,6 @@ function loadMapData(callback) {
     countries = topojson.feature(json, json.objects.countries).features;
     neighbors = topojson.neighbors(json.objects.countries.geometries);
 
-    //console.log(countries);
-    //console.log(neighbors);
-
     var geo_path = d3.geo.path()
       .projection(projection)
       ;
@@ -89,7 +97,7 @@ function loadMapData(callback) {
       v.playcount = 0;
     });
 
-    debugG.selectAll(".country")
+    topoG.selectAll(".country")
         .data(countries)
       .enter()
         .append("path")
@@ -99,7 +107,7 @@ function loadMapData(callback) {
           "stroke-opacity": 0.1,
           "stroke-weight": 1,
           "opacity": 0.1,
-          "class": "artist"})
+          "class": "country"})
         .style("fill", function(d, i) {
           return color(d.color = d3.max(neighbors[i], function(n) {
             return countries[n].color;
@@ -121,25 +129,33 @@ function loadArtistData(callback) {
 }
 
 function init(data) {
-    dotSize
-      .domain([0, d3.max(data, function(d) { return +d.playcount; })])
-      .range([1,10]);
+  var maxPlaycount = d3.max(data, function(d) { return +d.playcount; }),
+      totalPlaycount = 0;
+
+  dotSize
+    .domain([minPlaycount, maxPlaycount])
+    .range([0.25,10])
+    ;
+
 
   artistData = data.map(function(d) {
-    if (d.geocode) {
+    if (d.geocode && d.playcount > minPlaycount) {
       var point = projection([d.geocode.lng, d.geocode.lat]);
 
       if (point) {
         return {
           name: d.name,
+          id: d.id,
+          playcount: +d.playcount,
+          radius: dotSize(+d.playcount),
           lat: d.geocode.lat,
           lng: d.geocode.lng,
+          originalX: point[0],
+          originalY: point[1],
           x: point[0],
           y: point[1],
           x0: point[0],
           y0: point[1],
-          playcount: +d.playcount,
-          radius: dotSize(+d.playcount),
           genres: d.genres,
           discovery_rank: d.discovery_rank,
           familiarity: d.familiarity,
@@ -147,44 +163,54 @@ function init(data) {
           years_active: d.years_active,
           hotttnesss_rank: d.hotttnesss_rank,
           familiarity_rank: d.familiarity_rank,
-          id: d.id,
           artist_location: d.artist_location
         };
       }
       else {
-        //console.log("point outside of projection");
-        //console.log(d);
-        return { noGeocode: true };
+        return {
+          name: d.name,
+          id: d.id,
+          playcount: +d.playcount,
+          radius: dotSize(+d.playcount),
+          noGeocode: true
+        };
       }
     }
     else {
-      //console.log("no geocode");
-      //console.log(d);
-      return { noGeocode: true };
+      return {
+        name: d.name,
+        id: d.id,
+        playcount: +d.playcount,
+        radius: dotSize(+d.playcount),
+        noGeocode: true
+      };
     }
   });
 
   // Remove items without x,y from forceData
   forceData = artistData.filter(function(d) {
-    if (d.noGeocode !== true)
-      return d;
-    else
-      return null;
+    if (d.noGeocode !== true) return d;
+    else return null;
+  });
+
+  noGeocodeData = artistData.filter(function(d) {
+    if (d.noGeocode) return d;
+    else return null;
   });
 
   force
     .gravity(0)
     .charge(0.00000001)
     .chargeDistance(0.00000001)
-    .friction(0.7)
+    .friction(0.01)
+    .alpha(0.0001)
     .nodes(forceData)
     .size([my.width, my.height])
     .on("tick", tick)
-    // Kill the wild animations
-    //.start()
+    .start()
     ;
 
-  nodes = artistG.selectAll("circle")
+  nodes = artistG.selectAll(".artist")
       .data(forceData)
     .enter()
       .append("path")
@@ -196,9 +222,9 @@ function init(data) {
       })
       .attr({
         "stroke": "#000",
-        "stroke-opacity": 0.5,
+        "stroke-opacity": 1,
         "stroke-weight": 1,
-        "opacity": 1,
+        "opacity": 0.5,
         "class": "artist"})
       .attr("fill", function(d) { return getArtistColor(d); } )
       .on("click", function(d) { console.log(d); })
@@ -206,16 +232,78 @@ function init(data) {
       .on("mouseout", nameTip.hide)
       ;
 
-  debugG.selectAll("path")
+  // Bigger dom elements on bottom
+  nodes.sort(function(a,b) {
+    var aP = a.playcount,
+        bP = b.playcount;
+    if (aP > bP) return -1;
+    else return 1;
+  })
+  ;
+
+  topoG.selectAll("path")
     .data(countries)
     .attr("opacity", function(d) {
       return d.playcount > 0 ? 0.7 : 0.1;
     })
     ;
 
-  force.start();
-  for (var i = 100; i > 0; --i) force.tick();
-  force.stop();
+  //force.start();
+  //for (var i = 100; i > 0; --i) force.tick();
+  //force.stop();
+
+  countries.forEach(function(v, i) {
+    totalPlaycount += +v.playcount;
+  });
+
+  noGeocodeData.forEach(function(v, i) {
+    totalPlaycount += +v.playcount;
+  });
+
+  barSize
+    .domain([minPlaycount, totalPlaycount])
+    ;
+
+  countriesPlayData = countries.filter(function(d) {
+    if (d.playcount > minPlaycount) {
+      return d;
+    }
+  });
+
+  barG.selectAll("rect")
+      .data(countriesPlayData)
+    .enter()
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", function(d) { return barSize(d.playcount); })
+      .attr("height", 15)
+      .attr("fill", function(d) { return color(d.color); })
+    ;
+}
+
+function projectionTween(projection0, projection1) {
+  return function(d) {
+    var t = 0;
+
+    var projection = d3.geo.projection(project)
+      .scale(1)
+      .translate([my.width / 2, my.height / 2]);
+
+    var path = d3.geo.path()
+      .projection(projection);
+
+    function project(λ, φ) {
+      λ *= 180 / Math.PI, φ *= 180 / Math.PI;
+      var p0 = projection0([λ, φ]), p1 = projection1([λ, φ]);
+      return [(1 - t) * p0[0] + t * p1[0], (1 - t) * -p0[1] + t * -p1[1]];
+    }
+
+    return function(_) {
+      t = _;
+      return path(d);
+    };
+  };
 }
 
 function getArtistColor(artist) {
@@ -239,16 +327,28 @@ function zoomed() {
     .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")")
     .attr("stroke-width", function() { return dotBorderScale(dotBorder / d3.event.scale); })
     ;
-}
 
+  /*
+   *artistG.selectAll("path")
+   *  .attr("d", function(d) {
+   *      var x = d.x,
+   *          y = d.y,
+   *          rad = dotSize(d.playcount / (0.5 * d3.event.scale));
+   *      return polygonPath(x, y, rad, 6);
+   *  })
+   *  ;
+   */
+}
 
 function tick(e) {
   var q = d3.geom.quadtree(forceData),
       i = 0,
       n = forceData.length;
 
-  while (++i < n) {
-    q.visit(circleCollide(forceData[i]));
+  if (buttonForce.getAttribute("data-force") === "true") {
+    while (++i < n) {
+      q.visit(circleCollide(forceData[i]));
+    }
   }
 
   nodes.each(gravity(0.2 * e.alpha))
@@ -258,12 +358,7 @@ function tick(e) {
           rad = dotSize(d.playcount);
       return polygonPath(x, y, rad, 6);
     })
-    //.attr("x", function(d) { return d.x; })
-    //.attr("y", function(d) { return d.y; })
-    //.attr("cx", function(d) { return d.x; })
-    //.attr("cy", function(d) { return d.y; })
     ;
-  //console.log("alpha");
 }
 
 // Move nodes toward cluster focus.
@@ -300,7 +395,7 @@ function circleCollide(thisNode) {
   };
 }
 
-function polygonPath(x,y,rad,sides) {
+function polygonPath(x, y, rad, sides) {
   var path = "M ";
   for (var a = 0; a < sides; a++) {
     if (a > 0) {
@@ -312,3 +407,26 @@ function polygonPath(x,y,rad,sides) {
   path = path + "z";
   return path;
 }
+
+buttonSwitched.addEventListener("click", function() {
+  d3.selectAll(".country").transition()
+    .duration(750)
+    .attrTween("d", projectionTween(projection, projection2))
+    ;
+  artistG.selectAll("path").transition()
+    .duration(750)
+    .attrTween("d", projectionTween(projection, projection2))
+    ;
+});
+
+buttonForce.addEventListener("click", function() {
+  if (buttonForce.getAttribute("data-force") === "true") {
+    force.stop();
+    force.start();
+    buttonForce.setAttribute("data-force", "false");
+  }
+  else {
+    force.start();
+    buttonForce.setAttribute("data-force", "true");
+  }
+});

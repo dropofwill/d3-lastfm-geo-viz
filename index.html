@@ -8,6 +8,11 @@
 		font-family: "verdana", sans-serif;
 	}
 
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
 	.hide {
 		display: none;
 	}
@@ -22,8 +27,25 @@
 
 <body>
 
-<div class="data-viz">
+<div class="container">
+  <h1>My Last.fm Listening History from 2012 to 2014</h1>
+
+  <div class="data-viz">
+  </div>
+
+  <div class="artist-box">
+    <h2>Hover Over an Artist</h2>
+  </div>
+
+  <div class="country-box">
+    <h2>Click on a Country</h2>
+  </div>
 </div>
+
+
+
+<button id="projection-switch">Switch Projection</button>
+<button id="force-switch" data-force="false">Toggle Force Layout</button>
 
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
