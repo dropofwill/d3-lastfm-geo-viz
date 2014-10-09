@@ -1,63 +1,71 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
+  <head>
+    <meta charset="utf-8">
 
-<style>
-	body {
-		font-family: "verdana", sans-serif;
-	}
+    <style>
+      @import url(http://fonts.googleapis.com/css?family=Oswald:400,300|Roboto:700,300italic,700italic,300);
+      
+      body {
+        font-family: "Roboto", "verdana", sans-serif;
+      }
 
-  .container {
-    max-width: 960px;
-    margin: 0 auto;
-  }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: "Oswald", sans-serif;
+        text-transform: uppercase;
+        font-weight: 400;
+      }
 
-	.hide {
-		display: none;
-	}
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+      }
 
-  .tip {
-    background: beige;
-    border-radius: 3px;
-    padding: 3px;
-  }
-</style>
-</head>
+      .hide {
+        display: none;
+      }
 
-<body>
+      .tip {
+        background: beige;
+        border-radius: 3px;
+        padding: 3px;
+      }
+    </style>
+  </head>
 
-<div class="container">
-  <h1>My Last.fm Listening History from 2012 to 2014</h1>
+  <body>
 
-  <div class="data-viz">
-  </div>
+    <div class="container">
+      <h1>My Last.fm Listening History from 2012 to 2014</h1>
 
-  <div class="artist-box">
-    <h2>Hover Over an Artist</h2>
-  </div>
+      <div class="data-viz">
+      </div>
 
-  <div class="country-box">
-    <h2>Click on a Country</h2>
-  </div>
-</div>
+      <div class="artist-box">
+        <h2>Hover Over an Artist</h2>
+      </div>
+
+      <div class="country-box">
+        <h2>Click on a Country</h2>
+      </div>
+    </div>
 
 
 
-<button id="projection-switch">Switch Projection</button>
-<button id="force-switch" data-force="false">Toggle Force Layout</button>
+    <button id="projection-switch">Switch Projection</button>
+    <button id="force-switch" data-force="false">Toggle Force Layout</button>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
-<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
-<script src="http://d3js.org/queue.v1.min.js"></script>
-<script src="http://d3js.org/topojson.v1.min.js"></script>
-<script src="./d3-tip.js"></script>
-<!--<script src="cartogram.js"></script>-->
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <script src="http://d3js.org/queue.v1.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script src="./d3-tip.js"></script>
+    <!--<script src="cartogram.js"></script>-->
 
-<script src="plotter.js"></script>
-<!--<script src="carto-plotter.js"></script>-->
+    <script src="plotter.js"></script>
+    <!--<script src="carto-plotter.js"></script>-->
 
-</body>
+  </body>
 </html>
 

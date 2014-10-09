@@ -1,28 +1,12 @@
-// set defaults
-var my = {
-  "className": "dot",
-  "projection": d3.geo.albers(),
-  "strokeWidth": 1,
-  "stroke": "#ffffff",
-  "fill": "#000000",
-  "width": 960,
-  "height": 550,
-  "friction": 0.5,
-  "charge": -0.5,
-  "chargeDistance": 10,
-  "force": null,
-  // Required Settings
-  "data": null,
-  "parentElement": null
-};
-
 var svg,
     artistG,
     topoG,
     barG,
+    width = 960,
+    height = 550,
     projection = d3.geo.kavrayskiy7()
-                   .scale(170)
-                   .translate([my.width/2, my.height/2])
+                   .scale(220)
+                   .translate([width/2 - 20, height/2])
                    .precision(0.1),
     projection2 =  d3.geo.azimuthalEqualArea(),
     dotSize =    d3.scale.linear(),
@@ -61,13 +45,22 @@ zoom = d3.behavior.zoom()
 
 svg = d3.select(".data-viz")
     .append("svg")
-    .attr({ width: my.width,
-            height: my.height })
+    .attr({ width: width,
+            height: height })
     .call(zoom)
     ;
 
 // invoke tip in the context of the selection
 svg.call(nameTip);
+
+// A rectangle to reset the view, drawn behind the map
+svg.append("rect")
+  .attr("class", "background")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("fill", "azure")
+  .on("click", reset)
+  ;
 
 topoG = svg.append("g").attr("class", "geometry");
 artistG = svg.append("g").attr("class", "artists");
@@ -134,7 +127,7 @@ function init(data) {
 
   dotSize
     .domain([minPlaycount, maxPlaycount])
-    .range([0.25,10])
+    .range([0.25,15])
     ;
 
 
@@ -150,12 +143,9 @@ function init(data) {
           radius: dotSize(+d.playcount),
           lat: d.geocode.lat,
           lng: d.geocode.lng,
-          originalX: point[0],
-          originalY: point[1],
-          x: point[0],
-          y: point[1],
-          x0: point[0],
-          y0: point[1],
+          originalX: point[0], originalY: point[1],
+          x: point[0], y: point[1],
+          x0: point[0], y0: point[1],
           genres: d.genres,
           discovery_rank: d.discovery_rank,
           familiarity: d.familiarity,
@@ -205,7 +195,7 @@ function init(data) {
     .friction(0.01)
     .alpha(0.0001)
     .nodes(forceData)
-    .size([my.width, my.height])
+    .size([width, height])
     .on("tick", tick)
     .start()
     ;
@@ -248,10 +238,6 @@ function init(data) {
     })
     ;
 
-  //force.start();
-  //for (var i = 100; i > 0; --i) force.tick();
-  //force.stop();
-
   countries.forEach(function(v, i) {
     totalPlaycount += +v.playcount;
   });
@@ -288,7 +274,7 @@ function projectionTween(projection0, projection1) {
 
     var projection = d3.geo.projection(project)
       .scale(1)
-      .translate([my.width / 2, my.height / 2]);
+      .translate([width / 2, height / 2]);
 
     var path = d3.geo.path()
       .projection(projection);
@@ -338,6 +324,12 @@ function zoomed() {
    *  })
    *  ;
    */
+}
+
+function reset() {
+  svg.transition()
+    .duration(750)
+    .call(zoom.translate([0, 0]).scale(1).event);
 }
 
 function tick(e) {
