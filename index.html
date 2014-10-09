@@ -48,12 +48,16 @@
       <div class="country-box">
         <h2>Click on a Country</h2>
       </div>
+
+      <div class="ui--row ui--row--abs middle hide">
+        <span class="map--ui ico--zoom-in" id="zoomIn"></span>
+        <span class="map--ui" id="reset">Reset</span>
+        <span class="map--ui ico--zoom-out" id="zoomOut"></span>
+        <span class="map--ui ico--locked" id="lock">Gestures</span>
+        <span class="map--ui ico--expand expander" id="force-switch" data-el=".map">Spread Artists</span>
+      </div>
     </div>
 
-
-
-    <button id="projection-switch">Switch Projection</button>
-    <button id="force-switch" data-force="false">Toggle Force Layout</button>
 
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>

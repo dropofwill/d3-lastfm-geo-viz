@@ -268,30 +268,6 @@ function init(data) {
     ;
 }
 
-function projectionTween(projection0, projection1) {
-  return function(d) {
-    var t = 0;
-
-    var projection = d3.geo.projection(project)
-      .scale(1)
-      .translate([width / 2, height / 2]);
-
-    var path = d3.geo.path()
-      .projection(projection);
-
-    function project(λ, φ) {
-      λ *= 180 / Math.PI, φ *= 180 / Math.PI;
-      var p0 = projection0([λ, φ]), p1 = projection1([λ, φ]);
-      return [(1 - t) * p0[0] + t * p1[0], (1 - t) * -p0[1] + t * -p1[1]];
-    }
-
-    return function(_) {
-      t = _;
-      return path(d);
-    };
-  };
-}
-
 function getArtistColor(artist) {
   var artistColor;
   countries.forEach(function(v, i) {
@@ -399,17 +375,6 @@ function polygonPath(x, y, rad, sides) {
   path = path + "z";
   return path;
 }
-
-buttonSwitched.addEventListener("click", function() {
-  d3.selectAll(".country").transition()
-    .duration(750)
-    .attrTween("d", projectionTween(projection, projection2))
-    ;
-  artistG.selectAll("path").transition()
-    .duration(750)
-    .attrTween("d", projectionTween(projection, projection2))
-    ;
-});
 
 buttonForce.addEventListener("click", function() {
   if (buttonForce.getAttribute("data-force") === "true") {
