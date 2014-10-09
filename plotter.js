@@ -36,9 +36,11 @@ var svg,
     artistDetails = d3.select(".artist-details"),
     countryDetails = d3.select(".country-details"),
 
-    nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
-      return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
-    }),
+    /*
+     *nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
+     *  return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
+     *}),
+     */
 
     force = d3.layout.force();
 
@@ -65,7 +67,7 @@ svg.append("rect")
   .attr("width", width)
   .attr("height", height)
   .attr("fill", "azure")
-  .on("click", reset)
+  //.on("click", reset)
   ;
 
 topoG = svg.append("g").attr("class", "geometry");
@@ -225,8 +227,8 @@ function init(data) {
         console.log(d);
         updateBox(d, "artist");
       })
-      .on("mouseover", nameTip.show)
-      .on("mouseout", nameTip.hide)
+      //.on("mouseover", nameTip.show)
+      //.on("mouseout", nameTip.hide)
       ;
 
   // Bigger dom elements on bottom
@@ -279,7 +281,28 @@ function init(data) {
 }
 
 function updateBox(d, type) {
+  var d_ = d;
   if (type === "artist") {
+    d3.select(".artist-name").text(d.name + ": " + d.playcount + " plays");
+    d3.select(".artist-loc").text(d.artist_location.location);
+    d3.select(".artist-years").text(function() {
+      console.log(d_.years_active[0].start + " - " + d_.years_active[0].end);
+      console.log(d_);
+      if (d_.years_active[0].start && d_.years_active[0].end) {
+        return d_.years_active[0].start + " - " + d_.years_active[0].end;
+      }
+      else if (d_.years_active[0].start) {
+        return d_.years_active[0].start + " - Present";
+      }
+      else {
+        return null;
+      }
+    });
+    d3.select(".artist-genre").html("<i>Genres:</i> " + d.genres.map(function(v) { return v.name; }).join(", "));
+    d3.select(".artist-fam").html("<i>Familiarity:</i> " + d.familiarity);
+    d3.select(".artist-hot").html("<i>Hotttnesss:</i> " + d.hotttnesss);
+
+    var myCountry = d.artist_location.country;
   }
 }
 
