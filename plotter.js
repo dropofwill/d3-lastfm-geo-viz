@@ -192,6 +192,10 @@ function init(data) {
     else return null;
   });
 
+
+  console.log(forceData.length);
+  console.log(noGeocodeData);
+
   force
     .gravity(0)
     .charge(0.00000001)
