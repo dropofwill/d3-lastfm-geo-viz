@@ -14,9 +14,11 @@ var svg,
     color =      d3.scale.ordinal()
                     .domain([0,3])
                     //.range(["#7b6888", "#c7ceda","#98abc5",  "#d0743c", "#ff8c00"]),
-                    .range(['rgb(166,206,227)','rgb(31,120,180)','rgb(178,223,138)','rgb(51,160,44)']),
+                    //.range(['rgb(166,206,227)','rgb(31,120,180)','rgb(178,223,138)','rgb(51,160,44)']),
+                    .range(colorbrewer.Paired[6]),
     dotBorder = 1,
     minPlaycount = 3,
+    geo_path,
     countries,
     neighbors,
     countriesPlayData,
@@ -25,6 +27,9 @@ var svg,
     noGeocodeData,
     artistData,
     zoom,
+    currentTranslate = 0,
+    currentScale = 0,
+    active = d3.select(null),
 
     locked = false,
     buttonForce = document.querySelector("#force-switch"),
@@ -35,13 +40,6 @@ var svg,
 
     artistDetails = d3.select(".artist-details"),
     countryDetails = d3.select(".country-details"),
-
-    /*
-     *nameTip = d3.tip().attr("class", "d3-tip").html(function(d) {
-     *  return "<div class='tip'><p><b>" + d.name + "</b><br>" + d.artist_location.location + "<br>Playcount: " + d.playcount + "</p></div>";
-     *}),
-     */
-
     force = d3.layout.force();
 
 // Set the zoom behavior defaults
@@ -57,9 +55,6 @@ svg = d3.select(".data-viz")
             height: height })
     .call(zoom)
     ;
-
-// invoke tip in the context of the selection
-//svg.call(nameTip);
 
 // A rectangle to reset the view, drawn behind the map
 svg.append("rect")
@@ -89,7 +84,7 @@ function loadMapData(callback) {
     countries = topojson.feature(json, json.objects.countries).features;
     neighbors = topojson.neighbors(json.objects.countries.geometries);
 
-    var geo_path = d3.geo.path()
+    geo_path = d3.geo.path()
       .projection(projection)
       ;
 
@@ -224,11 +219,9 @@ function init(data) {
         "class": "artist"})
       .attr("fill", function(d) { return getArtistColor(d); } )
       .on("click", function(d) {
-        console.log(d);
         updateBox(d, "artist");
       })
-      //.on("mouseover", nameTip.show)
-      //.on("mouseout", nameTip.hide)
+      .on("mouseover", function(d) { updateBox(d, "artist"); })
       ;
 
   // Bigger dom elements on bottom
@@ -246,7 +239,7 @@ function init(data) {
       return d.playcount > minPlaycount ? 0.7 : 0.1;
     })
     .on("click", function(d) {
-      if (d.playcount > minPlaycount) console.log(d);
+      if (d.playcount > minPlaycount) clicked(d);
     })
     ;
 
@@ -306,6 +299,32 @@ function updateBox(d, type) {
   }
 }
 
+// This is called on click and onchange of the select box
+function clicked(d) {
+  //if (active.node() === this) return reset();
+  //active.classed("active", false);
+  //active = d3.select(this).classed("active", true);
+
+  var bounds = geo_path.bounds(d);
+  var xbounds = d3.extent(forceData, function(d) { return projection(d.lat); }),
+      ybounds = d3.extent(forceData, function(d) { return projection(d.lng); });
+      //bounds = [xbounds, ybounds];
+
+  //console.log([xbounds, ybounds], currentTranslate, currentScale);
+
+  var dx = bounds[1][0] - bounds[0][0],
+      dy = bounds[1][1] - bounds[0][1],
+      x = (bounds[0][0] + bounds[1][0]) / 2,
+      y = (bounds[0][1] + bounds[1][1]) / 2,
+      scale = 0.7 / Math.max(dx / width, dy / height),
+      translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+  console.log(bounds);
+  svg.transition()
+    .duration(1000)
+    .call(zoom.translate(translate).scale(scale).event);
+}
+
 function getArtistColor(artist) {
   var artistColor;
   countries.forEach(function(v, i) {
@@ -323,6 +342,9 @@ function getArtistColor(artist) {
 }
 
 function zoomed() {
+  currentScale = d3.event.scale;
+  currentTranslate = d3.event.translate;
+
   svg.selectAll("path")
     .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")")
     .attr("stroke-width", function() { return dotBorderScale(dotBorder / d3.event.scale); })
