@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="./styles.css">
+  </head>
+
+  <body>
+
+    <div class="container">
+      <h1>My Last.fm Listening History from 2012 to 2014</h1>
+
+      <div class="data-viz">
+        <div class="ui--row ui--row--abs">
+          <span class="map--ui icon-plus" id="zoom-in-btn"></span>
+          <span class="map--ui" id="reset-btn">Reset</span>
+          <span class="map--ui icon-minus" id="zoom-out-btn"></span>
+          <span class="map--ui icon-locked" id="lock-switch">Gestures</span>
+          <span class="map--ui icon-expand" id="force-switch" data-el=".map">Spread Artists</span>
+        </div>
+      </div>
+
+      <div class="box artist-box">
+        <h2 class="artist-name">Select an Artist</h2>
+        <section class="artist-details">
+          <p class="artist-loc"></p>
+          <p class="artist-years"></p>
+          <p class="artist-genre"></p>
+          <p class="artist-hot"></p>
+          <p class="artist-fam"></p>
+        </section>
+      </div>
+
+      <div class="box country-box">
+        <h2 class="country-name">Select a Country</h2>
+        <section class="country-details">
+          <p class="country-total"></p>
+          <p class="country-percent"></p>
+        </section>
+      </div>
+    </div>
+
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <script src="http://d3js.org/queue.v1.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+
+    <script src="plotter.js"></script>
+  </body>
+</html>
+
