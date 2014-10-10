@@ -13,8 +13,6 @@ var svg,
     barSize =    d3.scale.linear(),
     color =      d3.scale.ordinal()
                     .domain([0,3])
-                    //.range(["#7b6888", "#c7ceda","#98abc5",  "#d0743c", "#ff8c00"]),
-                    //.range(['rgb(166,206,227)','rgb(31,120,180)','rgb(178,223,138)','rgb(51,160,44)']),
                     .range(colorbrewer.Paired[6]),
     dotBorder = 1,
     minPlaycount = 3,
@@ -66,7 +64,6 @@ svg.append("rect")
   .attr("width", width)
   .attr("height", height)
   .attr("fill", "azure")
-  //.on("click", reset)
   ;
 
 topoG = svg.append("g").attr("class", "geometry");
@@ -306,11 +303,6 @@ function clicked(d) {
   active = d3.select(d);
 
   var bounds = geo_path.bounds(d);
-  var xbounds = d3.extent(forceData, function(d) { return projection(d.lat); }),
-      ybounds = d3.extent(forceData, function(d) { return projection(d.lng); });
-      //bounds = [xbounds, ybounds];
-
-  //console.log([xbounds, ybounds], currentTranslate, currentScale);
 
   var dx = bounds[1][0] - bounds[0][0],
       dy = bounds[1][1] - bounds[0][1],
@@ -319,7 +311,6 @@ function clicked(d) {
       scale = 0.7 / Math.max(dx / width, dy / height),
       translate = [width / 2 - scale * x, height / 2 - scale * y];
 
-  //console.log(bounds);
   svg.transition()
     .duration(1000)
     .call(zoom.translate(translate).scale(scale).event);
@@ -328,8 +319,6 @@ function clicked(d) {
 function getArtistColor(artist) {
   var artistColor,
       artistCountry = getRelatedCountry(artist);
-
-  //console.log(artistCountry);
 
   if (artistCountry) {
     artistCountry.playcount += +artist.playcount;
@@ -503,5 +492,3 @@ buttonGesture.addEventListener("click", function() {
     svg.call(zoom);
   }
 });
-
-
