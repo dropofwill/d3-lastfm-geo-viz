@@ -18,6 +18,7 @@ var svg,
                     .range(colorbrewer.Paired[6]),
     dotBorder = 1,
     minPlaycount = 3,
+    totalPlaycount = 0,
     geo_path,
     countries,
     neighbors,
@@ -29,7 +30,9 @@ var svg,
     zoom,
     currentTranslate = 0,
     currentScale = 0,
-    active = d3.select(null),
+
+    formatPercent = d3.format(",.1%"),
+    formatDecimal = d3.format(".3n"),
 
     locked = false,
     buttonForce = document.querySelector("#force-switch"),
@@ -37,6 +40,7 @@ var svg,
     buttonZoomIn = document.querySelector("#zoom-in-btn"),
     buttonZoomOut = document.querySelector("#zoom-out-btn"),
     buttonReset = document.querySelector("#reset-btn"),
+    active = d3.select(null),
 
     artistDetails = d3.select(".artist-details"),
     countryDetails = d3.select(".country-details"),
@@ -124,8 +128,7 @@ function loadArtistData(callback) {
 }
 
 function init(data) {
-  var maxPlaycount = d3.max(data, function(d) { return +d.playcount; }),
-      totalPlaycount = 0;
+  var maxPlaycount = d3.max(data, function(d) { return +d.playcount; });
 
   dotSize
     .domain([minPlaycount, maxPlaycount])
@@ -219,9 +222,10 @@ function init(data) {
         "class": "artist"})
       .attr("fill", function(d) { return getArtistColor(d); } )
       .on("click", function(d) {
-        updateBox(d, "artist");
-      })
-      .on("mouseover", function(d) { updateBox(d, "artist"); })
+        clicked(getRelatedCountry(d));
+        updateArtistBox(d);
+        })
+      .on("mouseover", function(d) { updateArtistBox(d); })
       ;
 
   // Bigger dom elements on bottom
@@ -236,10 +240,11 @@ function init(data) {
   topoG.selectAll("path")
     .data(countries)
     .attr("opacity", function(d) {
-      return d.playcount > minPlaycount ? 0.7 : 0.1;
+      return d.playcount > minPlaycount ? 0.7 : 0.05;
     })
     .on("click", function(d) {
       if (d.playcount > minPlaycount) clicked(d);
+      updateCountryBox(d);
     })
     ;
 
@@ -260,50 +265,41 @@ function init(data) {
       return d;
     }
   });
-
-  //barG.selectAll("rect")
-      //.data(countriesPlayData)
-    //.enter()
-      //.append("rect")
-      //.attr("x", 0)
-      //.attr("y", 0)
-      //.attr("width", function(d) { return barSize(d.playcount); })
-      //.attr("height", 15)
-      //.attr("fill", function(d) { return color(d.color); })
-    //;
 }
 
-function updateBox(d, type) {
+function updateArtistBox(d) {
   var d_ = d;
-  if (type === "artist") {
-    d3.select(".artist-name").text(d.name + ": " + d.playcount + " plays");
-    d3.select(".artist-loc").text(d.artist_location.location);
-    d3.select(".artist-years").text(function() {
-      console.log(d_.years_active[0].start + " - " + d_.years_active[0].end);
-      console.log(d_);
-      if (d_.years_active[0].start && d_.years_active[0].end) {
-        return d_.years_active[0].start + " - " + d_.years_active[0].end;
-      }
-      else if (d_.years_active[0].start) {
-        return d_.years_active[0].start + " - Present";
-      }
-      else {
-        return null;
-      }
-    });
-    d3.select(".artist-genre").html("<i>Genres:</i> " + d.genres.map(function(v) { return v.name; }).join(", "));
-    d3.select(".artist-fam").html("<i>Familiarity:</i> " + d.familiarity);
-    d3.select(".artist-hot").html("<i>Hotttnesss:</i> " + d.hotttnesss);
+  d3.select(".artist-name").text(d.name + ": " + d.playcount + " plays");
+  d3.select(".artist-loc").text(d.artist_location.location);
+  d3.select(".artist-years").text(function() {
+    if (d_.years_active[0] && d_.years_active[0].start && d_.years_active[0].end) {
+      return d_.years_active[0].start + " - " + d_.years_active[0].end;
+    }
+    else if (d_.years_active[0] && d_.years_active.start) {
+      return d_.years_active[0].start + " - Present";
+    }
+    else {
+      return null;
+    }
+  });
+  d3.select(".artist-genre").html("<i>Genres:</i> " + d.genres.map(function(v) { return v.name; }).join(", "));
+  d3.select(".artist-fam").html("<i>Familiarity:</i> " + formatDecimal(d.familiarity));
+  d3.select(".artist-hot").html("<i>Hotttnesss:</i> " + formatDecimal(d.hotttnesss));
 
-    var myCountry = d.artist_location.country;
-  }
+  var myCountry = getRelatedCountry(d);
+  if (myCountry) updateCountryBox(myCountry);
+}
+
+function updateCountryBox(d) {
+  d3.select(".country-name").text(d.properties.ADMIN);
+  d3.select(".country-total").html("<i>Total Plays:</i> " + d.playcount + " / " + totalPlaycount);
+  d3.select(".country-percent").html("<i>Percent of Total Plays: </i>" + formatPercent(d.playcount / totalPlaycount));
 }
 
 // This is called on click and onchange of the select box
 function clicked(d) {
-  //if (active.node() === this) return reset();
-  //active.classed("active", false);
-  //active = d3.select(this).classed("active", true);
+  if (active.node() === d) return reset();
+  active = d3.select(d);
 
   var bounds = geo_path.bounds(d);
   var xbounds = d3.extent(forceData, function(d) { return projection(d.lat); }),
@@ -319,26 +315,44 @@ function clicked(d) {
       scale = 0.7 / Math.max(dx / width, dy / height),
       translate = [width / 2 - scale * x, height / 2 - scale * y];
 
-  console.log(bounds);
+  //console.log(bounds);
   svg.transition()
     .duration(1000)
     .call(zoom.translate(translate).scale(scale).event);
 }
 
 function getArtistColor(artist) {
-  var artistColor;
-  countries.forEach(function(v, i) {
+  var artistColor,
+      artistCountry = getRelatedCountry(artist);
+
+  //console.log(artistCountry);
+
+  if (artistCountry) {
+    artistCountry.playcount += +artist.playcount;
+    artistColor = color(artistCountry.color);
+  }
+  else {
+    console.warn(artist.name, "has no country");
+  }
+  return artistColor;
+}
+
+function getRelatedCountry(artist) {
+  var relatedCountry = false;
+
+  for (var i = 0; i < countries.length; i++) {
     var aCountry = artist.artist_location.country,
-        vBrk = v.properties.BRK_NAME,
-        vAdmin = v.properties.ADMIN,
-        vFormal = v.properties.FORMAL_EN;
+        vBrk = countries[i].properties.BRK_NAME,
+        vAdmin = countries[i].properties.ADMIN,
+        vFormal = countries[i].properties.FORMAL_EN;
 
     if (vBrk == aCountry || vAdmin == aCountry || vFormal == aCountry) {
-      artistColor = color(v.color);
-      v.playcount += +artist.playcount;
+      relatedCountry = countries[i];
+      break;
     }
-  });
-  return artistColor;
+  }
+
+  return relatedCountry;
 }
 
 function zoomed() {
@@ -352,6 +366,8 @@ function zoomed() {
 }
 
 function reset() {
+  active = d3.select(null);
+
   svg.transition()
     .duration(750)
     .call(zoom.translate([0, 0]).scale(1).event);
